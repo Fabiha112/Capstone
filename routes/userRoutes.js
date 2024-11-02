@@ -25,6 +25,6 @@ router.post('/createEntry', checkUserAuth, (req, res, next) => {
   }, DataController.createEntry);
   
 router.get('/getUserEntries',checkUserAuth ,DataController.getUserEntries);
-router.get('/getAllNumericFieldsByUser',checkUserAuth,DataController.getAllNumbericFieldsByUserId);
+router.get('/getSelectedNumericFieldsWithStatsByUserId',checkUserAuth,DataController.getSelectedNumericFieldsWithStatsByUserId);
 
 export default router;

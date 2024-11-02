@@ -85,62 +85,122 @@ class DataController {
     }
    
   };
-  // Fetch only numeric values for a specific user by userId
-  static getAllNumbericFieldsByUserId = async(req,res) => {
-    try{
-      // Get the userId from the authenticated request
-      const userId = req.user._id;
-      console.log('Fetching data for user ID:,userId');
-    // Find all entries for the user by userId
-      const userEntries = await DataModel.find({userId:userId});
-      // If no entry is found, return a 404 error
-      if(!userEntries || userEntries.length ===0){
-        return res.status(404).json({status:"failed",message:"User entry not found"});
-      }
-            // Array to hold numeric fields from all entries
-            const allNumericFields = userEntries.map(entry => {
-              const numericFields = {
-                wakingUp: entry.wakingUp,
-                firstGoOut: entry.firstGoOut,
-                firstScreenOn: entry.firstScreenOn,
-                breakfast: entry.breakfast,
-                lunch: entry.lunch,
-                eveningSnacks: entry.eveningSnacks,
-                dinner: entry.dinner,
-                goingToSleep: entry.goingToSleep,
-                cooperateAtHome: entry.cooperateAtHome,
-                overnightSleeping: entry.overnightSleeping,
-                gettingSleepTime: entry.gettingSleepTime,
-                outgoingTendency: entry.outgoingTendency,
-                outgoingCount: entry.outgoingCount,
-                screenTime: entry.screenTime,
-                junkFood: entry.junkFood,
-                makingNoise: entry.makingNoise,
-                walking: entry.walking,
-                showingAnger: entry.showingAnger,
-                glassCrashTendency: entry.glassCrashTendency,
-                pushingTendency: entry.pushingTendency,
-                itemThrowTendency: entry.itemThrowTendency,
-                foodWaterThrowTendency: entry.foodWaterThrowTendency,
-                hitWithHand: entry.hitWithHand,
-                hitWithHead: entry.hitWithHead,
-                masturbation: entry.masturbation
-              };
+//   // Fetch only numeric values for a specific user by userId
+//   static getAllNumbericFieldsByUserId = async(req,res) => {
+//     try{
+//       // Get the userId from the authenticated request
+//       const userId = req.user._id;
+//       console.log('Fetching data for user ID:,userId');
+//     // Find all entries for the user by userId
+//       const userEntries = await DataModel.find({userId:userId});
+//       // If no entry is found, return a 404 error
+//       if(!userEntries || userEntries.length ===0){
+//         return res.status(404).json({status:"failed",message:"User entry not found"});
+//       }
+//             // Array to hold numeric fields from all entries
+//             const allNumericFields = userEntries.map(entry => {
+//               const numericFields = {
+//                 wakingUp: entry.wakingUp,
+//                 firstGoOut: entry.firstGoOut,
+//                 firstScreenOn: entry.firstScreenOn,
+//                 breakfast: entry.breakfast,
+//                 lunch: entry.lunch,
+//                 eveningSnacks: entry.eveningSnacks,
+//                 dinner: entry.dinner,
+//                 goingToSleep: entry.goingToSleep,
+//                 cooperateAtHome: entry.cooperateAtHome,
+//                 overnightSleeping: entry.overnightSleeping,
+//                 gettingSleepTime: entry.gettingSleepTime,
+//                 outgoingTendency: entry.outgoingTendency,
+//                 outgoingCount: entry.outgoingCount,
+//                 screenTime: entry.screenTime,
+//                 junkFood: entry.junkFood,
+//                 makingNoise: entry.makingNoise,
+//                 walking: entry.walking,
+//                 showingAnger: entry.showingAnger,
+//                 glassCrashTendency: entry.glassCrashTendency,
+//                 pushingTendency: entry.pushingTendency,
+//                 itemThrowTendency: entry.itemThrowTendency,
+//                 foodWaterThrowTendency: entry.foodWaterThrowTendency,
+//                 hitWithHand: entry.hitWithHand,
+//                 hitWithHead: entry.hitWithHead,
+//                 masturbation: entry.masturbation
+//               };
           
 
-return {
-  dateOfRecord: entry.dateOfRecord,
-  numericFields: numericFields
-};
-});
+// return {
+//   dateOfRecord: entry.dateOfRecord,
+//   numericFields: numericFields
+// };
+// });
 
- // Return only the numeric fields
- res.status(200).json({ status: "success", data: allNumericFields });
+//  // Return only the numeric fields
+//  res.status(200).json({ status: "success", data: allNumericFields });
+// } catch (error) {
+//   console.error('Error fetching numeric fields:', error);
+//   res.status(500).json({ status: "failed", message: "Failed to fetch numeric fields" });
+// }
+// };
+// Fetch specific numeric fields for a user by userId and calculate mean and standard deviation
+static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    console.log('Fetching data for user ID:', userId);
+
+    // Find all entries for the user by userId
+    const userEntries = await DataModel.find({ userId: userId });
+
+    // If no entries are found, return a 404 error
+    if (!userEntries || userEntries.length === 0) {
+      return res.status(404).json({ status: "failed", message: "No entries found for this user" });
+    }
+      // Initialize groupedDataByDate to store data by date
+      const groupedDataByDate = {};
+    // Fields we are interested in
+    const fieldsToCalculate = [
+      'wakingUp', 'firstGoOut', 'firstScreenOn', 'breakfast', 'lunch', 'eveningSnacks', 'dinner',
+      'goingToSleep', 'cooperateAtHome', 'overnightSleeping', 'gettingSleepTime', 'outgoingTendency',
+      'outgoingCount', 'screenTime', 'junkFood', 'makingNoise', 'walking', 'showingAnger',
+      'glassCrashTendency', 'pushingTendency', 'itemThrowTendency', 'foodWaterThrowTendency',
+      'hitWithHand', 'hitWithHead', 'masturbation'
+    ];
+
+
+   // Populate groupedDataByDate with values for each field
+   userEntries.forEach(entry => {
+    const date = entry.dateOfRecord.toISOString().split('T')[0]; // Format date as YYYY-MM-DD
+    if (!groupedDataByDate[date]) groupedDataByDate[date] = {};
+
+    fieldsToCalculate.forEach(field => {
+      if (entry[field] !== undefined) {
+        if (!groupedDataByDate[date][field]) groupedDataByDate[date][field] = [];
+        groupedDataByDate[date][field].push(entry[field]);
+      }
+    });
+  });
+
+  // Calculate mean and standard deviation for each field by date
+  const statsByDate = {};
+  for (const [date, fields] of Object.entries(groupedDataByDate)) {
+    statsByDate[date] = {};
+    for (const [field, values] of Object.entries(fields)) {
+      const mean = values.reduce((a, b) => a + b, 0) / values.length;
+      const stdDev = Math.sqrt(values.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / values.length);
+      statsByDate[date][field] = {
+        mean: parseFloat(mean.toFixed(2)),
+        stdDev: parseFloat(stdDev.toFixed(2))
+      };
+    }
+  }
+
+  // Return the statistics for each field by date
+  res.status(200).json({ status: "success", data: statsByDate });
 } catch (error) {
-  console.error('Error fetching numeric fields:', error);
-  res.status(500).json({ status: "failed", message: "Failed to fetch numeric fields" });
+  console.error('Error fetching selected numeric fields with stats by date:', error);
+  res.status(500).json({ status: "failed", message: "Failed to fetch selected numeric fields with stats by date" });
 }
 };
 }
+
 
 export default DataController;
