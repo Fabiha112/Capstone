@@ -114,7 +114,7 @@ static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
   const numericFieldsCollection = {};
 
   // Prepare batches for each field with exactly 30 entries
-  userEntries.forEach(entry => {
+  userEntries.forEach((entry,index) => {
     fieldsToCalculate.forEach(field => {
       if (entry[field] !== undefined) {
         if (!numericFieldsCollection[field]) numericFieldsCollection[field] = [];
@@ -125,21 +125,25 @@ static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
           const values = numericFieldsCollection[field];
           const mean = values.reduce((a, b) => a + b, 0) / values.length;
           const stdDev = Math.sqrt(values.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / values.length);
+ // Get date range for the current 30-entry batch
+ const batchStartDate = entry.dateOfRecord.toISOString().split('T')[0];
+ const batchEndDate = userEntries[index + 29]?.dateOfRecord.toISOString().split('T')[0];  // Using index here
 
-          // Get date range for the current 30-entry batch
-          const batchStartDate = entry.dateOfRecord.toISOString().split('T')[0];
-          const batchEndDate = userEntries[userEntries.indexOf(entry) + 29]?.dateOfRecord.toISOString().split('T')[0];
 
+        // Calculate the row mean for each entry
+       
+        const rowMean = values.reduce((a, b) => a + b, 0) / values.length;
           // Add stats for this batch
           statsByBatch.push({
             field: field,
             dateRange: `${batchStartDate} to ${batchEndDate}`,
             stats: {
               mean: parseFloat(mean.toFixed(2)),
-              stdDev: parseFloat(stdDev.toFixed(2))
+              stdDev: parseFloat(stdDev.toFixed(2)),
+              rowMean: parseFloat(rowMean.toFixed(2))
             }
           });
-
+        
           // Reset field batch for the next 30 entries
           numericFieldsCollection[field] = [];
         }
