@@ -77,6 +77,7 @@ class DataController {
   // Endpoint to get user-specific data
   static getUserEntries = async (req, res) => {
     try {
+      
      const dataEntries = await DataModel.find({ userId: req.user._id }); 
      res.status(200).send(dataEntries);
     } catch (error) {
@@ -111,6 +112,7 @@ static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
 
   // Initialize batch statistics
   const statsByBatch = [];
+  
   const numericFieldsCollection = {};
 
   // Prepare batches for each field with exactly 30 entries
@@ -125,7 +127,9 @@ static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
           const values = numericFieldsCollection[field];
           const mean = values.reduce((a, b) => a + b, 0) / values.length;
           const stdDev = Math.sqrt(values.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / values.length);
- // Get date range for the current 30-entry batch
+          const standardizedValues = values.map(x => parseFloat(((x - mean) / stdDev).toFixed(2)));
+
+          // Get date range for the current 30-entry batch
  const batchStartDate = entry.dateOfRecord.toISOString().split('T')[0];
  const batchEndDate = userEntries[index + 29]?.dateOfRecord.toISOString().split('T')[0];  // Using index here
 
@@ -138,9 +142,12 @@ static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
             field: field,
             dateRange: `${batchStartDate} to ${batchEndDate}`,
             stats: {
+          
               mean: parseFloat(mean.toFixed(2)),
               stdDev: parseFloat(stdDev.toFixed(2)),
-              rowMean: parseFloat(rowMean.toFixed(2))
+              rowMean: parseFloat(rowMean.toFixed(2)),
+              standardizedValues
+             
             }
           });
         
