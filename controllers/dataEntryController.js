@@ -77,7 +77,6 @@ class DataController {
   // Endpoint to get user-specific data
   static getUserEntries = async (req, res) => {
     try {
-      
      const dataEntries = await DataModel.find({ userId: req.user._id }); 
      res.status(200).send(dataEntries);
     } catch (error) {
@@ -112,7 +111,6 @@ static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
 
   // Initialize batch statistics
   const statsByBatch = [];
-  
   const numericFieldsCollection = {};
 
   // Prepare batches for each field with exactly 30 entries
@@ -128,26 +126,21 @@ static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
           const mean = values.reduce((a, b) => a + b, 0) / values.length;
           const stdDev = Math.sqrt(values.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / values.length);
           const standardizedValues = values.map(x => parseFloat(((x - mean) / stdDev).toFixed(2)));
-
           // Get date range for the current 30-entry batch
  const batchStartDate = entry.dateOfRecord.toISOString().split('T')[0];
  const batchEndDate = userEntries[index + 29]?.dateOfRecord.toISOString().split('T')[0];  // Using index here
 
 
-        // Calculate the row mean for each entry
-       
-        const rowMean = values.reduce((a, b) => a + b, 0) / values.length;
+     
           // Add stats for this batch
           statsByBatch.push({
             field: field,
             dateRange: `${batchStartDate} to ${batchEndDate}`,
             stats: {
-          
               mean: parseFloat(mean.toFixed(2)),
               stdDev: parseFloat(stdDev.toFixed(2)),
-              rowMean: parseFloat(rowMean.toFixed(2)),
+          
               standardizedValues
-             
             }
           });
         
@@ -165,7 +158,83 @@ static getSelectedNumericFieldsWithStatsByUserId = async (req, res) => {
   res.status(500).json({ status: "failed", message: "Failed to fetch selected numeric fields with stats by batch" });
 }
 };
+// Function to calculate Row Mean for 25 fields
+static calculateRowMeanAndSD = async (req, res) => {
+  try {
+    const userId = req.user._id;  // Get user ID from the authenticated user
+    console.log('Fetching data for user ID:', userId);
+
+    // Fetch all entries for the user and sort them by date
+    const userEntries = await DataModel.find({ userId }).sort({ dateOfRecord: 1 });
+
+    // If no entries are found, return a 404 error
+    if (!userEntries || userEntries.length === 0) {
+      return res.status(404).json({
+        status: "failed",
+        message: "No entries found for this user."
+      });
+    }
+
+    // Define the 25 fields you want to include in the calculation
+    const fieldsToCalculate = [
+      'wakingUp', 'firstGoOut', 'firstScreenOn', 'breakfast', 'lunch', 'eveningSnacks', 'dinner',
+      'goingToSleep', 'cooperateAtHome', 'overnightSleeping', 'gettingSleepTime', 'outgoingTendency',
+      'outgoingCount', 'screenTime', 'junkFood', 'makingNoise', 'walking', 'showingAnger',
+      'glassCrashTendency', 'pushingTendency', 'itemThrowTendency', 'foodWaterThrowTendency',
+      'toilet', 'hitWithHead', 'masturbation'
+    ];
+
+    // Initialize an array to store the results
+    const statsByBatch = [];
+
+    // Iterate through each user entry and calculate row mean
+    userEntries.forEach((entry, index) => {
+      fieldsToCalculate.forEach(field => {
+        if (entry[field] !== undefined) {
+          // Extract the field values for the selected 25 fields
+          const fieldValues = fieldsToCalculate.map(field => entry[field]);
+
+          // Filter out any undefined or null values to avoid errors in calculation
+          const validValues = fieldValues.filter(value => value !== undefined && value !== null);
+
+          // If there are valid values, calculate the row mean
+          if (validValues.length > 0) {
+            const rowMean = validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
+
+            // Calculate the standard deviation (SD) of the row means
+            // First, store all row means for each field
+            const rowMeans = userEntries.map(entry => {
+              const validValuesForEntry = fieldsToCalculate.map(field => entry[field]).filter(value => value !== undefined && value !== null);
+              return validValuesForEntry.length > 0 ? validValuesForEntry.reduce((sum, value) => sum + value, 0) / validValuesForEntry.length : 0;
+            });
+
+            // Calculate the SD of row means (for this field)
+            const meanOfRowMeans = rowMeans.reduce((a, b) => a + b, 0) / rowMeans.length;
+            const variance = rowMeans.reduce((acc, value) => acc + Math.pow(value - meanOfRowMeans, 2), 0) / rowMeans.length;
+            const stdDev = Math.sqrt(variance);
+
+            // Push the result to statsByBatch with field, date, row mean, and SD of row means
+            statsByBatch.push({
+              field: field,
+              date: entry.dateOfRecord.toISOString().split('T')[0],  // Format the date (e.g., YYYY-MM-DD)
+              rowMean: parseFloat(rowMean.toFixed(2)),  // Round row mean to 2 decimal places
+              standardDeviation: parseFloat(stdDev.toFixed(2))  // Round SD to 2 decimal places
+            });
+          }
+        }
+      });
+    });
+
+    // Return the statistics for each entry
+    res.status(200).json({ status: "success", data: statsByBatch });
+
+  } catch (error) {
+    console.error('Error fetching row mean for selected fields:', error);
+    res.status(500).json({ status: "failed", message: "Failed to fetch row mean for selected fields" });
+  }
+};
 }
+
 
 
 
