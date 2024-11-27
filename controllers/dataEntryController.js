@@ -225,7 +225,7 @@ static calculateRowMeanAndSD = async (req, res) => {
       });
     });
 
-    // Return the statistics for each entry
+    
     res.status(200).json({ status: "success", data: statsByBatch });
 
   } catch (error) {

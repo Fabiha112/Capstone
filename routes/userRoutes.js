@@ -26,9 +26,6 @@ router.post('/createEntry', checkUserAuth, (req, res, next) => {
   
 router.get('/getUserEntries',checkUserAuth ,DataController.getUserEntries);
 router.get('/getSelectedNumericFieldsWithStatsByUserId',checkUserAuth,DataController.getSelectedNumericFieldsWithStatsByUserId);
-// Route for calculating both Row Mean and Standardized Value (Z-score) for each entry
-//router.get('/calculateRowMeanAndStandardizedValue', checkUserAuth, DataController.calculateRowMeanAndStandardizedValue);
-
 // Route to fetch 25 fields and calculate the row mean
 router.get('/calculateRowMeanAndSD', checkUserAuth, DataController.calculateRowMeanAndSD);
 
